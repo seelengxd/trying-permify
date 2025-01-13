@@ -65,10 +65,16 @@ entity problem {
     permission view_others_submission = view and project.view_others_submission
 }
 
+entity group {
+    relation member @user
+}
 
 entity submission {
     relation problem @problem
-    relation owner @user
 
-    action view = owner and problem.view_own_submission or (problem.view_others_submission not owner)
+    // only one of these two should be non-empty
+    relation owner @user
+    relation group_owner @group
+
+    action view = ((owner or group_owner.member) and problem.view_own_submission) or (problem.view_others_submission not owner)
 }

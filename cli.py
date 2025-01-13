@@ -6,7 +6,15 @@ import permify as p
 from rich.console import Console
 from rich.table import Table
 from rich import print
-from src.entities import ORGANISATION, PROBLEMS, PROJECT, USERS, ROLES
+from src.entities import (
+    GROUPS,
+    ORGANISATION,
+    PROBLEMS,
+    PROJECT,
+    SUBMISSIONS,
+    USERS,
+    ROLES,
+)
 
 configuration = p.Configuration(host="http://localhost:3476")
 
@@ -72,11 +80,13 @@ def tuples() -> list[p.Tuple]:
         for permission in role_permissions[role]
     ]
 
-    # grant users 4,5,6 admin, ta, student respectively
+    # grant users 4,5,6,7 admin, ta, student, student, student respectively
     role_assign_tuples = [
         {"entity": ROLES["Admin"], "relation": "assignee", "subject": USERS[3]},
         {"entity": ROLES["TA"], "relation": "assignee", "subject": USERS[4]},
         {"entity": ROLES["Student"], "relation": "assignee", "subject": USERS[5]},
+        {"entity": ROLES["Student"], "relation": "assignee", "subject": USERS[6]},
+        {"entity": ROLES["Student"], "relation": "assignee", "subject": USERS[7]},
     ]
 
     # create 2 problems
@@ -85,12 +95,28 @@ def tuples() -> list[p.Tuple]:
         for problem in PROBLEMS
     ]
 
+    # create 1 group with user 6, 7
+    group_tuples = [
+        {"entity": GROUPS[0], "relation": "member", "subject": USERS[i]}
+        for i in range(5, 7)
+    ]
+
+    # create submission 1 (owned by group) and submission 2 (owned by user 8)
+    submission_tuples = [
+        {"entity": SUBMISSIONS[0], "relation": "problem", "subject": PROBLEMS[0]},
+        {"entity": SUBMISSIONS[1], "relation": "problem", "subject": PROBLEMS[0]},
+        {"entity": SUBMISSIONS[0], "relation": "group_owner", "subject": GROUPS[0]},
+        {"entity": SUBMISSIONS[1], "relation": "owner", "subject": USERS[7]},
+    ]
+
     ret = (
         organisation_tuples
         + project_tuples
         + role_tuples
         + role_assign_tuples
         + problem_tuples
+        + group_tuples
+        + submission_tuples
     )
     return RootModel[list[p.Tuple]].model_validate(ret).root
 
@@ -108,7 +134,7 @@ def attributes() -> list[p.Attribute]:
         {
             "entity": problem,
             "attribute": "restricted",
-            "value": get_permify_bool(i == 0),
+            "value": get_permify_bool(i == 1),
         }
         for i, problem in enumerate(PROBLEMS)
     ]
@@ -131,7 +157,7 @@ def seed():
         data_api.data_write(
             TENANT_ID,
             p.DataWriteBody(
-                metadata={"schema_version": "ctu0e6kb5eec73d9vh10"},
+                metadata=METADATA,
                 tuples=tuples(),
                 attributes=attributes(),
             ),
@@ -164,7 +190,7 @@ def check_permission(entity, permission, subject) -> bool:
         result = permissions_api.permissions_check(
             TENANT_ID,
             p.CheckBody(
-                metadata={**METADATA, "depth": 100},
+                metadata={**METADATA, "depth": 200},
                 entity=entity,
                 permission=permission,
                 subject=subject,
@@ -186,17 +212,32 @@ def check():
     PROBLEM_ACTIONS = ["view", "edit", "delete", "make_submission"]
     for action in PROBLEM_ACTIONS:
         results[f"{action} problem 1"] = [
-            check_permission(PROBLEMS[1], action, user) for user in USERS
+            check_permission(PROBLEMS[0], action, user) for user in USERS
         ]
     for action in PROBLEM_ACTIONS:
-        results[f"{action} problem 0 [bold red] (restricted)"] = [
-            check_permission(PROBLEMS[0], action, user) for user in USERS
+        results[f"{action} problem 2 [bold red] (restricted)"] = [
+            check_permission(PROBLEMS[1], action, user) for user in USERS
+        ]
+
+    for submission in SUBMISSIONS:
+        results[f"view submission {submission['id']}"] = [
+            check_permission(submission, "view", user) for user in USERS
         ]
 
     table = Table(title="Permission check")
     table.add_column("Permission")
-    for i in range(1, 7):
-        table.add_column(f"User {i}")
+    labels = [
+        "Owner",
+        "Admin",
+        "Observer",
+        "Project Admin",
+        "TA",
+        "Student [Group]",
+        "Student [Group]",
+        "Student",
+    ]
+    for i in range(1, 9):
+        table.add_column(f"User {i}\n{labels[i - 1]}")
 
     for k, v in results.items():
         table.add_row(k, *["✅" if x else "❌" for x in v])
