@@ -1,12 +1,16 @@
-ORGANISATION = {"type": "organisation", "id": "1"}
-USERS = [{"id": f"{i}", "type": "user"} for i in range(1, 9)]
-PROJECT = {"type": "project", "id": "1"}
+def make_entity(type: str, id: str):
+    return {"type": type, "id": id}
+
+
+ORGANISATION = make_entity("organisation", "1")
+USERS = [make_entity("user", str(i)) for i in range(1, 9)]
+PROJECT = make_entity("project", "1")
 ROLES = {
-    "Admin": {"type": "role", "id": "1"},
-    "TA": {"type": "role", "id": "2"},
-    "Student": {"type": "role", "id": "3"},
+    "Admin": make_entity("role", "1"),
+    "TA": make_entity("role", "2"),
+    "Student": make_entity("role", "3"),
 }
 
-PROBLEMS = [{"type": "problem", "id": str(i)} for i in range(1, 3)]
-GROUPS = [{"type": "group", "id": "1"}]
-SUBMISSIONS = [{"type": "submission", "id": "1"}, {"type": "submission", "id": "2"}]
+PROBLEMS = [make_entity("problem", str(i)) for i in range(1, 3)]
+GROUPS = [make_entity("group", "1")]
+SUBMISSIONS = [make_entity("submission", str(i)) for i in range(1, 3)]

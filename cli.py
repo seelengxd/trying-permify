@@ -41,16 +41,22 @@ def init(schema_text: Annotated[typer.FileText, typer.Option]):
             f.write(response.schema_version)
 
 
+def make_tuple(entity, relation, subject):
+    return {"entity": entity, "relation": relation, "subject": subject}
+
+
 def tuples() -> list[p.Tuple]:
     # organisation: users 1,2,3 as owner, admin and observer respectively
     organisation_tuples = [
-        {"entity": ORGANISATION, "relation": "owner", "subject": USERS[0]},
-        {"entity": ORGANISATION, "relation": "admin", "subject": USERS[1]},
-        {"entity": ORGANISATION, "relation": "observer", "subject": USERS[2]},
+        make_tuple(ORGANISATION, "owner", USERS[0]),
+        make_tuple(ORGANISATION, "admin", USERS[1]),
+        make_tuple(ORGANISATION, "observer", USERS[2]),
     ]
 
     # the organisation has one project
-    project_tuples = [{"entity": PROJECT, "relation": "org", "subject": ORGANISATION}]
+    project_tuples = [
+        make_tuple(PROJECT, "org", ORGANISATION),
+    ]
 
     # grant access to the roles
     role_permissions = {}
@@ -71,42 +77,32 @@ def tuples() -> list[p.Tuple]:
     ]
 
     role_tuples = [
-        {
-            "entity": PROJECT,
-            "relation": permission,
-            "subject": {**ROLES[role], "relation": "assignee"},
-        }
+        make_tuple(PROJECT, permission, {**ROLES[role], "relation": "assignee"})
         for role in role_permissions
         for permission in role_permissions[role]
     ]
 
     # grant users 4,5,6,7 admin, ta, student, student, student respectively
     role_assign_tuples = [
-        {"entity": ROLES["Admin"], "relation": "assignee", "subject": USERS[3]},
-        {"entity": ROLES["TA"], "relation": "assignee", "subject": USERS[4]},
-        {"entity": ROLES["Student"], "relation": "assignee", "subject": USERS[5]},
-        {"entity": ROLES["Student"], "relation": "assignee", "subject": USERS[6]},
-        {"entity": ROLES["Student"], "relation": "assignee", "subject": USERS[7]},
+        make_tuple(ROLES["Admin"], "assignee", USERS[3]),
+        make_tuple(ROLES["TA"], "assignee", USERS[4]),
+        make_tuple(ROLES["Student"], "assignee", USERS[5]),
+        make_tuple(ROLES["Student"], "assignee", USERS[6]),
+        make_tuple(ROLES["Student"], "assignee", USERS[7]),
     ]
 
     # create 2 problems
-    problem_tuples = [
-        {"entity": problem, "relation": "project", "subject": PROJECT}
-        for problem in PROBLEMS
-    ]
+    problem_tuples = [make_tuple(problem, "project", PROJECT) for problem in PROBLEMS]
 
     # create 1 group with user 6, 7
-    group_tuples = [
-        {"entity": GROUPS[0], "relation": "member", "subject": USERS[i]}
-        for i in range(5, 7)
-    ]
+    group_tuples = [make_tuple(GROUPS[0], "member", USERS[i]) for i in range(5, 7)]
 
     # create submission 1 (owned by group) and submission 2 (owned by user 8)
     submission_tuples = [
-        {"entity": SUBMISSIONS[0], "relation": "problem", "subject": PROBLEMS[0]},
-        {"entity": SUBMISSIONS[1], "relation": "problem", "subject": PROBLEMS[0]},
-        {"entity": SUBMISSIONS[0], "relation": "group_owner", "subject": GROUPS[0]},
-        {"entity": SUBMISSIONS[1], "relation": "owner", "subject": USERS[7]},
+        make_tuple(SUBMISSIONS[0], "problem", PROBLEMS[0]),
+        make_tuple(SUBMISSIONS[1], "problem", PROBLEMS[0]),
+        make_tuple(SUBMISSIONS[0], "group_owner", GROUPS[0]),
+        make_tuple(SUBMISSIONS[1], "owner", USERS[7]),
     ]
 
     ret = (
